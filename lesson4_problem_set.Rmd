@@ -144,15 +144,120 @@ qplot(x = carat, y = ..count.., data = diamonds, geom = 'freqpoly',
 
 ```{r}
 sugar <- read.csv("sugar_consumption.csv", header = T, row.names = 1, check.names = F)
-?read.table
 transposed_sugar <- as.data.frame(t(sugar))
+#column names
 names(transposed_sugar)
+#row names
 row.names(transposed_sugar)
-transposed_sugar
 #remove all columns that are empty
 transposed_sugar[sapply( X = transposed_sugar, FUN =  function(x) all(is.na(x)))] <- NULL
-transposed_sugar
-qplot(data = transposed_sugar, x = Philippines)
+pt1 <- qplot(data = transposed_sugar, x = Philippines, binwidth = 5,
+      color = I("black"), fill = I("blue")) + 
+  scale_x_continuous(limits = c(0, 200))
+
+pt2 <- qplot(data = transposed_sugar, x = Niger, binwidth = 5,
+      color = I("black"), fill = I("red")) + 
+  scale_x_continuous(limits = c(0, 200))
+
+pt3 <- qplot(data = transposed_sugar, x = France, binwidth = 5,
+      color = I("black"), fill = I("green")) + 
+  scale_x_continuous(limits = c(0, 200))
+
+#change united states name to remove space
+names(transposed_sugar)[names(transposed_sugar)=="United States"] <- "USA"
+
+pt4 <- qplot(data = transposed_sugar, x = USA, binwidth = 5,
+      color = I("black"), fill = I("yellow")) + 
+  scale_x_continuous(limits = c(0, 200))
+
+grid.arrange(pt1, pt2, pt3, pt4)
+
+summary(transposed_sugar$USA)
+summary(transposed_sugar$France)
+summary(transposed_sugar$Philippines)
+summary(transposed_sugar$Niger)
+
 ```
 
+#analysis
+I chose four countries to compare sugar consumption. I picked countries from different continents. I was not surprised that Niger had a much lower sugar consumption than the other countries or the order of which countries had the least and most sugar consumption. The only thing that I found surprising was how much sugar in general was consumed. According to the American Health Association, males should consume less than 37.5 grams per day and women 25 grams. Only Niger is below that, and the other three countries are very much above.
+
+```{r}
+#sugar graph
+
+#change sugar names 
+names(sugar)[names(sugar)=="1961"] <- "x1961"
+names(sugar)[names(sugar)=="1971"] <- "x1971"
+names(sugar)[names(sugar)=="1981"] <- "x1981"
+names(sugar)[names(sugar)=="1991"] <- "x1991"
+names(sugar)[names(sugar)=="2001"] <- "x2001"
+
+p1 = qplot(data = sugar, x = x1961, binwidth = 5,
+      color = I("black"), fill = I("yellow")) +
+  scale_x_continuous(limits = c(0, 200)) +
+  scale_y_continuous(limits = c(0,20))
+
+p2 = qplot(data = sugar, x = x1971, binwidth = 5,
+      color = I("black"), fill = I("blue")) +
+  scale_x_continuous(limits = c(0, 200)) +
+  scale_y_continuous(limits = c(0,20))
+
+p3 = qplot(data = sugar, x = x1981, binwidth = 5,
+      color = I("black"), fill = I("red")) +
+  scale_x_continuous(limits = c(0, 200)) +
+  scale_y_continuous(limits = c(0,20))
+
+p4 = qplot(data = sugar, x = x1991, binwidth = 5,
+      color = I("black"), fill = I("orange")) +
+  scale_x_continuous(limits = c(0, 200)) +
+  scale_y_continuous(limits = c(0,20))
+
+p5 = qplot(data = sugar, x = x2001, binwidth = 5,
+      color = I("black"), fill = I("green")) +
+  scale_x_continuous(limits = c(0, 200)) +
+  scale_y_continuous(limits = c(0,20))
+
+grid.arrange(p1, p2, p3, p4, p5)
+
+summary(sugar$x1961)
+summary(sugar$x1971)
+summary(sugar$x1981)
+summary(sugar$x1991)
+summary(sugar$x2001)
+
+```
+
+#analysis
+While sugar consumption has certainly increased incrementally each decade, the amounts have not been as high as I would have expected. I am interested in learning how sugar consumption has increased in developing countries, so as GDP increases, does sugar increase similarly? Maybe something to learn next lesson.
+
+```{r}
+#boxplot
+sugar[sapply( X = sugar, FUN =  function(x) all(is.na(x)))] <- NULL
+b1 = qplot(data = sugar, x = "1961", y = sugar$x1961,
+      ylab = "Sugar Consumed in Grams",
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 200))
+
+b2 = qplot(data = sugar, x = "1971", y = sugar$x1971,
+      ylab = "Sugar Consumed in Grams",
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 200))
+
+b3 = qplot(data = sugar, x = "1981", y = sugar$x1981,
+      ylab = "Sugar Consumed in Grams",
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 200))
+
+b4 = qplot(data = sugar, x = "1991", y = sugar$x1991,
+      ylab = "Sugar Consumed in Grams",
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 200))
+
+b5 = qplot(data = sugar, x = "2001", y = sugar$x2001,
+      ylab = "Sugar Consumed in Grams",
+      geom = 'boxplot') +
+  scale_y_continuous(limits = c(0, 200))
+
+grid.arrange(b1, b2, b3, b4, b5, ncol=5)
+```
 
