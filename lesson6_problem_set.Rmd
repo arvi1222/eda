@@ -1,0 +1,247 @@
+---
+title: "lesson6_problem_set"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+data("diamonds")
+summary(diamonds)
+```
+
+###Quiz 1
+
+```{r}
+ggplot(aes(x = x, y = price), data = diamonds) + 
+  geom_jitter(alpha = 1/100) +
+  xlim(3, 9)
+```
+
+###Quiz 2
+
+```{r}
+
+```
+
+###Quiz 3
+
+```{r}
+with(diamonds, cor.test(x, price))
+with(diamonds, cor.test(y, price))
+with(diamonds, cor.test(z, price))
+
+```
+
+###Quiz 4
+
+```{r}
+ggplot(aes(x = depth, y = price), data = diamonds) +
+  geom_point()
+```
+
+###Quiz 5
+
+```{r}
+ggplot(aes(x = depth, y = price), data = diamonds) +
+  geom_point(alpha = 1/100) +
+  scale_x_continuous(breaks = seq(56, 66, 2))
+```
+
+###Quiz 7
+
+```{r}
+with(diamonds, cor.test(depth, price))
+```
+###Quiz 8
+
+```{r}
+ggplot(aes(x = carat, y = price), 
+       data = subset(subset(diamonds, 
+                            diamonds$carat < quantile(diamonds$carat, 0.99)),
+                     diamonds$price < quantile(diamonds$price, 0.99))) +
+  geom_point()
+```
+
+###Quiz 9
+
+```{r}
+diamonds$volume = diamonds$x * diamonds$y * diamonds$z
+ggplot(aes(x = volume, y = price), data = diamonds) + 
+  geom_point()
+
+
+ggplot(aes(x = volume, y = price), data = diamonds) + 
+  geom_point(alpha = 1/20) +
+  xlim(0, 500)
+```
+
+```{r}
+library(plyr)
+count(diamonds$volume == 0)
+detach("package:plyr", unload=TRUE)
+```
+
+###Quiz 11
+
+```{r}
+normal_volume_diamonds <- subset(diamonds, diamonds$volume != 0 
+                                 & diamonds$volume <= 800)
+
+with(normal_volume_diamonds, cor.test(volume, price))
+```
+
+###Quiz 12
+
+```{r}
+ggplot(aes(x = volume, y = price), data = normal_volume_diamonds) + 
+  geom_point(alpha = 1/100) +
+  geom_smooth() +
+  xlim(0, 300)
+```
+
+###Quiz 13
+
+```{r}
+library(dplyr)
+
+diamondsByClarity <- diamonds %>%
+  group_by(clarity) %>%
+  summarise(mean_price = mean(price),
+            median_price = median(price),
+            min_price = min(price),
+            max_price = max(price),
+            n = n())
+
+head(diamondsByClarity)
+```
+
+###Quiz 14
+
+```{r}
+diamonds_by_clarity <- group_by(diamonds, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, 
+                                    mean_price = mean(price))
+
+diamonds_by_color <- group_by(diamonds, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, 
+                                  mean_price = mean(price))
+
+head(diamonds_mp_by_clarity)
+head(diamonds_mp_by_color)
+
+clarity_bar <- ggplot(aes(x = clarity, y = mean_price), 
+                    data = diamonds_mp_by_clarity) +
+  geom_col()
+
+color_bar <- ggplot(aes(x = color, y = mean_price), 
+                    data = diamonds_mp_by_color) +
+  geom_col()
+
+
+library(gridExtra)
+grid.arrange(clarity_bar, color_bar)
+
+```
+
+#Quiz 15
+
+```{r}
+install.packages("tidyr")
+library(tidyr)
+library(dplyr)
+#mung sugar data
+sugar <- read.csv("sugar_consumption.csv")
+gathered_sugar <- gather(sugar, "year", "n", 2:45)
+colnames(gathered_sugar) <- c('country', 'year', 'sugar_consumed')
+
+#mung electricity data
+electricity <- read.csv("indicator_electricity_consumption2.csv")
+electricity_select_years <- subset(electricity, 
+                                   select = c(country, X1961:X2004))
+gathered_electricity <- gather(electricity_select_years, 'year', 'n', 2:45)
+colnames(gathered_electricity) <- c('country', 'year', 'electricity')
+
+#mung food consumed data
+food <- read.csv("food_consumption.csv")
+food_select_years <- subset(food, select = c(X, X1961:X2004))
+gathered_food <- gather(food_select_years, 'year', 'n', 2:45)
+colnames(gathered_food) <- c('country', 'year', 'food_consumed')
+
+head(gathered_food)
+
+#combine dfs
+sugar_electricity <- inner_join(gathered_electricity, gathered_sugar, 
+                                by = c('country', 'year'))
+sugar_elec_food <- inner_join(sugar_electricity, gathered_food,
+                              by = c('country', 'year'))
+
+sug_elec_food_no_NA <- sugar_elec_food[complete.cases(sugar_elec_food),]
+head(sug_elec_food_no_NA)
+
+#plots
+ggplot(aes(x = electricity, y = food_consumed), data = sug_elec_food_no_NA) +
+  geom_point(alpha = 1/20)
+
+ggplot(aes(x = food_consumed, y = sugar_consumed), data = sug_elec_food_no_NA) +
+  geom_point(color = 'blue') + 
+  geom_smooth(color = 'yellow')
+with(sug_elec_food_no_NA, cor.test(food_consumed, sugar_consumed))
+ggsave('sugar_food.png')
+
+ggplot(aes(x = electricity, y = sugar_consumed), data = sug_elec_food_no_NA) +
+  geom_point(alpha = 1/10, color = 'blue') +
+  geom_smooth()
+
+sug_elec_food_no_NA$country
+
+#usa plots
+usa <- subset(sug_elec_food_no_NA, country == "United States")
+f1 <- ggplot(aes(x = sugar_consumed, y = food_consumed), data = usa) +
+  geom_point(color = 'blue') 
+e1 <- ggplot(aes(x = electricity, y = sugar_consumed), data = usa) +
+  geom_point(color = 'blue')
+
+#china plots
+china <- subset(sug_elec_food_no_NA, country == "China")
+f2 <- ggplot(aes(x = sugar_consumed, y = food_consumed), data = china) +
+  geom_point(color = 'red')
+e2 <- ggplot(aes(x = electricity, y = sugar_consumed), data = china) +
+  geom_point(color = 'red')
+
+#philippines plots
+philippines <- subset(sug_elec_food_no_NA, country == "Philippines")
+f3 <- ggplot(aes(x = sugar_consumed, y = food_consumed), data = philippines) +
+  geom_point(color = 'yellow')
+e3 <- ggplot(aes(x = electricity, y = sugar_consumed), data = philippines) +
+  geom_point(color = 'yellow')
+
+#kenya plots
+kenya <- subset(sug_elec_food_no_NA, country == "Kenya")
+f4 <- ggplot(aes(x = sugar_consumed, y = food_consumed), data = kenya) +
+  geom_point(color = 'orange')
+e4 <- ggplot(aes(x = electricity, y = sugar_consumed), data = kenya) +
+  geom_point(color = 'orange')
+
+ggplot(aes(x = year, y = food_consumed), data = usa) + 
+  geom_point()
+
+#japan plots
+japan <- subset(sug_elec_food_no_NA, country == "Japan")
+f5 <- ggplot(aes(x = sugar_consumed, y = food_consumed), data = japan) +
+  geom_point(color = 'green')
+e5 <- ggplot(aes(x = electricity, y = sugar_consumed), data =  japan) +
+  geom_point(color = 'green')
+
+
+grid.arrange(f1, f2, f3, f4, f5)
+grid.arrange(e1, e2, e3, e4, e5)
+
+kenya
+philippines
+usa
+```
+
