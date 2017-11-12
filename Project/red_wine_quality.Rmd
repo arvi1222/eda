@@ -1,0 +1,395 @@
+---
+title: "Red Wine Quality"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+wines <- read.csv('winequalityreds.csv')
+
+names(wines)
+
+
+
+```
+
+
+```{r}
+sum(is.na(wines))
+
+```
+
+There are no NA values in our wine data set.
+
+```{r}
+summary(wines)
+
+```
+
+Let's investigate the 0 values for the citric acid.
+
+```{r}
+sum(wines$citric.acid == 0)
+
+ggplot(aes(x = citric.acid), data = wines) +
+  geom_bar()
+```
+
+While there is a disproportionate amount of 0 values, they don't seem too out 
+of place. Having no citric acid could also be a marketing strategy for
+some wines.
+
+Our data is in tidy form and is complete.
+
+```{r}
+#how many wines are there of each quality
+ggplot(aes(x = quality), data = wines) +
+  geom_bar() +
+  scale_x_continuous(breaks = seq(1, 8, 1))
+```
+
+No terrible, score 1 or 2, or exceptional, score 9 or 10, wines appear on the list. Also, The wines seem to be split into three tiers: those with scores of 3 and 4, 5 and 6, 7 and 8. Let's create buckets to reflect this.
+
+```{r}
+wines$quality.bucket <- cut(wines$quality, breaks = c(2, 4, 6, 8))
+table(wines$quality.bucket)
+```
+
+Like the above graph showed, the majority of wines are in the middle bucket.
+
+```{r}
+#original plot in log form
+ggplot(aes(x = quality), data = wines) +
+  geom_bar()  +
+  scale_x_continuous(breaks = seq(1, 8, 1)) +
+  scale_y_log10()
+
+#normal distribution, check with sd and such
+#probably don't need this cause initial graph is pretty normal
+
+```
+
+With so many variables, lets look at a scatterplot matrix to see which variables correlate most with quality scores.
+
+```{r}
+ggpairs(wines)
+```
+
+The highest correlation is alcohol, then volatile acid, then sulphates
+
+```{r}
+ggpairs(wines, columns = 2:4)
+```
+
+
+```{r}
+ggplot(aes(x = alcohol), data = wines) + 
+  geom_bar(binwidth = 0.1)
+```
+
+```{r}
+#do this with averages?
+ggplot(aes(x = alcohol, y = quality), data = wines) + 
+  geom_point()
+```
+
+It's hard to tell what is happening from this graph.
+
+```{r}
+#average quality for each alcohol point
+ggplot(aes(x = alcohol, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+That is much better. From the graph we can see that as alcohol increases, so does quality. Let's see if 
+
+###alcohol 5 or more data points
+
+```{r}
+alcohol.averages <- wines %>% 
+  group_by(alcohol) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+alcohol.averages
+colnames(alcohol.averages) <- c('alcohol', 'quality.mean', 'n')
+alcohol.averages
+
+ggplot(aes(x = alcohol, y = quality.mean), 
+       data = subset(alcohol.averages, n > 4)) +
+  geom_point() +
+  stat_smooth(method = 'lm') + 
+  scale_x_continuous(limits = c(9, 12.99))
+
+```
+
+```{r}
+#alcohol averages in each quality bucket
+
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(alcohol))
+```
+It appears that bad and average wines have lower alcohol averages than high quality wines. 
+
+```{r}
+ggplot(aes(x = volatile.acidity), data = wines) + 
+  geom_bar(binwidth = 0.05)
+```
+
+```{r}
+high.volatile.acidity <- subset(wines, volatile.acidity >= 1)
+
+high.volatile.acidity$quality
+```
+
+```{r}
+#same graph, but for volatile acids
+
+ggplot(aes(x = volatile.acidity, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+```{r}
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(volatile.acidity))
+```
+
+```{r}
+#volatile acids more than 5
+volatile.acidity.averages <- wines %>% 
+  group_by(volatile.acidity) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+
+volatile.acidity.averages
+colnames(volatile.acidity.averages) <- c('volatile.acidity', 
+                                         'quality.mean', 'n')
+volatile.acidity.averages
+
+ggplot(aes(x = volatile.acidity, y = quality.mean), 
+       data = subset(volatile.acidity.averages, n > 4)) +
+  geom_point() +
+  stat_smooth(method = 'lm')
+
+```
+
+
+```{r}
+ggplot(aes(x = sulphates), data = wines) + 
+  geom_bar(binwidth = 0.05)
+```
+
+There are a few outliers here, lets see the quality scores of those outliers.
+
+```{r}
+high.sulphates <- subset(wines, sulphates >= 1.5)
+
+high.sulphates$quality
+```
+
+```{r}
+#same graph, but for sulphates
+
+ggplot(aes(x = sulphates, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+
+##count sulphates to see if there are enough at the higher levels
+```
+```{r}
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(sulphates))
+```
+
+```{r}
+#this is how to do it!!!!
+
+#average sulphite by quality 
+sulphite.averages <- wines %>% 
+  group_by(sulphates) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+
+sulphite.averages
+colnames(sulphite.averages) <- c('sulphites', 'quality.mean', 'n')
+sulphite.averages
+
+ggplot(aes(x = sulphites, y = quality.mean), 
+       data = subset(sulphite.averages, n >4)) +
+  geom_point() +
+  stat_smooth(method = 'lm') +
+  scale_x_continuous(limits = c(0.4, 0.9))
+
+#do the same for total.acidity
+```
+
+```{r}
+#same graph, but for citric acids
+
+ggplot(aes(x = citric.acid, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+```{r}
+
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(citric.acid))
+  
+
+```
+
+it looks like the higher ranked wines tended to have more citric acid
+
+```{r}
+#nothing interesting  
+ggplot(aes(x = fixed.acidity, y = citric.acid), data = wines) + 
+  geom_point()
+```
+
+```{r}
+#not very useful
+ggplot(aes(x = pH, y = fixed.acidity), data = wines) + 
+  geom_point(aes(color = quality.bucket))
+```
+
+
+```{r}
+#attempt to do for loop to remove values with only 1 result
+#total fail, keep for examples, delete after
+names(wines)
+#make empty vector
+five_or_more <- vector()
+
+head(wines)
+
+#for loop example
+for(s in wines$sulphates) {
+  print(s)
+}
+
+#round wine acidity to 1 decimal
+wines$total.acidity.rounded <- round(wines$total.acidity, digits = 1)
+
+table(wines$sulphates)
+
+#gives count for each result
+acidity.numbers <- as.data.frame(table(wines$total.acidity.rounded))
+colnames(acidity.numbers) <- c('value', 'freq')
+names(acidity.numbers)
+#change from factor
+acidity.numbers$value <- as.numeric(as.character(acidity.numbers$value))
+head(acidity.numbers)
+length(acidity.numbers)
+for(i in 1:99) {
+  if(acidity.numbers[i,2] > 4) {
+    five_or_more[i] <- (acidity.numbers[i,1])
+  }
+}
+five_or_more
+acidity.numbers[1,1]
+
+
+
+```
+
+
+
+
+```{r}
+#still need to get rid of single points
+#round total acidity to 1 decimal
+wines$total.acidity <- wines$fixed.acidity +
+  wines$volatile.acidity + wines$citric.acid
+wines$total.acidity.rounded <- round(wines$total.acidity, digits = 1)
+
+
+ggplot(aes(x = total.acidity.rounded, y = quality), data = wines) +
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+```{r}
+#total acidity without single points
+#average sulphite by quality 
+total.acidity.rounded.averages <- wines %>% 
+  group_by(total.acidity.rounded) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+total.acidity.rounded.averages
+colnames(total.acidity.rounded.averages) <- c('total.acidity',
+                                              'quality.mean', 
+                                              'n')
+total.acidity.rounded.averages
+
+ggplot(aes(x = total.acidity, y = quality.mean), 
+       data = subset(total.acidity.rounded.averages, n >4)) +
+  geom_point()
+
+```
+
+###citric acid 5 or more data points
+
+```{r}
+citric.acid.averages <- wines %>% 
+  group_by(citric.acid) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+
+citric.acid.averages
+colnames(citric.acid.averages) <- c('citric.acid', 'quality.mean', 'n')
+citric.acid.averages
+
+ggplot(aes(x = citric.acid, y = quality.mean), 
+       data = subset(citric.acid.averages, n >4)) +
+  geom_point()
+```
+
+
+
+```{r}
+#chlorides vs quality
+#do with more thqn 5
+ggplot(aes(x = chlorides, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+```{r}
+chlorides.averages <- wines %>% 
+  group_by(chlorides) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+chlorides.averages
+colnames(chlorides.averages) <- c('chlorides', 'quality.mean', 'n')
+chlorides.averages
+
+ggplot(aes(x = chlorides, y = quality.mean), 
+       data = subset(chlorides.averages, n > 4)) +
+  geom_point()
+```
+
+```{r}
+#check summaries of each bucket
+summary(subset(wines, quality < 5))
+```
+
+```{r}
+summary(subset(wines, quality > 4 & quality < 7))
+```
+
+```{r}
+summary(subset(wines, quality > 6))
+```
