@@ -1,0 +1,551 @@
+---
+title: "Red Wine Quality"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+###load libraries and set up the data set
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+wines <- read.csv('winequalityreds.csv')
+```
+
+###give number of observations and variables
+
+```{r}
+dim(wines)
+```
+Our dataset contains 1599 observations, and has xx variables.
+
+###give head of wines
+
+```{r}
+str(wines)
+```
+
+
+
+```{r}
+sum(is.na(wines))
+
+```
+
+There are no NA values in our wine data set.
+
+```{r}
+summary(wines)
+
+```
+
+Let's investigate the 0 values for the citric acid.
+
+```{r}
+sum(wines$citric.acid == 0)
+
+ggplot(aes(x = citric.acid), data = wines) +
+  geom_bar()
+```
+
+While there is a disproportionate amount of 0 values, they don't seem too out 
+of place. Having no citric acid could also be a marketing strategy for
+some wines.
+
+Our data is in tidy form and is complete. My overall objective is to find out which variables most affect the quality rating for each wine, so let's begin by taking a look at how many wines we have at each quality level.
+
+```{r}
+#how many wines are there of each quality
+ggplot(aes(x = quality), data = wines) +
+  geom_bar() +
+  scale_x_continuous(breaks = seq(1, 8, 1))
+```
+
+Nearly all wines are average. No wines scored less than 3 or more than 8 so none
+were terrible or exceptional. In addition, the majority of wines received a 5 or
+6 for quality. What did the few wines that did not score a 5 or 6 contain that
+gave them that mark?
+ 
+```{r}
+
+wines$single.quality.bucket <- cut(wines$quality, 
+                                   breaks = c(2, 3, 4, 5, 6, 7, 8))
+table(wines$single.quality.bucket)
+```
+
+We see the number of wines at each level of quality. Nothing surprising here as we saw these ratios in the graph above. Creating the quality buckets will come in handy later when we begin to graph in multiple variables.
+
+Let's take a look at the other variable counts beginning with alcohol as I suspect it will have the largest affect on quality ratings.
+
+###alcohol
+
+```{r}
+ggplot(aes(x = alcohol), data = wines) +
+  geom_bar() +
+  scale_x_continuous()
+```
+
+There are a few wines that give alcohol percentage to more than one decimal points. Let's set a binwidth to make the graph easier to read.
+
+```{r}
+ggplot(aes(x = alcohol), data = wines) +
+  geom_bar(binwidth = 0.1)
+```
+
+```{r}
+summary(wines$alcohol)
+```
+
+The lowest alcohol percentage is 8.4 and the highest is 14.9. The percentage
+tops at 9.5% and there are fewer wines as alcohol percentage increases. I am
+curious how quality relates to alcohol percentage as well as how different
+combinations of alcohol and the other variables realate to quality. For example,
+does high alcohol and high sugar score better than high alcohol and low sugar or
+vice versa?
+
+###fixed.acidity
+
+```{r}
+ggplot(aes(x = fixed.acidity), data = wines) +
+  geom_bar()
+```
+
+Fixed acidity is pretty much normal with most wines having 6-10 units of fixed acidity. Let's explore the outliers and see if having a high fixed acidity count affects quality much.
+
+```{r}
+#maybe ditch this
+quantile(wines$fixed.acidity, .95)
+
+summary(subset(wines, fixed.acidity > 11.8))
+
+mean(subset(wines, fixed.acidity > 11.8)$quality)
+```
+
+There is a relatively high ratio of high quality wines with high fixed acidity compared to the population. Let's explore this more later. Let's also later check if wines with higher amounts of fixed acidity have high levels of other variables.
+
+```{r}
+#maybe ditch as well
+ggplot(aes(x = fixed.acidity), data = wines) +
+  geom_bar() +
+  scale_y_log10()
+```
+
+Pretty much normal.
+
+###volatile acid
+
+
+```{r}
+ggplot(aes(x = volatile.acidity), data = wines) + 
+  geom_bar(binwidth = 0.01)
+```
+
+Most of the wines have a volatile acidity between 0.2 and 1. Let's look a little bit closer at this interval and increase our binwidth slightly to better observe the peaks. 
+
+```{r}
+ggplot(aes(x = volatile.acidity), data = wines) + 
+  geom_bar(binwidth = 0.02) +
+  scale_x_continuous(limits = c(0.2, 1))
+```
+
+We have some peaks at 0.4, 0.5, and 0.6. Could this be that wines look to get those exact levels or just that some wines round their amounts differently.
+
+###citric.acid
+
+```{r}
+ggplot(aes(x = citric.acid), data = wines) +
+  geom_bar()
+```
+
+This is first variable without a normal distribution. Most wines don't have any citric acid. And up to .50 units, there is uniform distribution. There is a spike at .49 units. Why don't some of the wines have any citric acid? Is there a reason for the small spike? 
+
+```{r}
+summary(subset(wines, citric.acid == 0))
+```
+
+
+###residual.sugar
+
+```{r}
+ggplot(aes(x = residual.sugar), data = wines) +
+  geom_bar()
+```
+
+Almost all wines have sugar levels between 1 and 3. Why do some wines have so much sugar? How does it affect the other variables especially quality? Let's take a closer look at this and adjust binwidth.
+
+```{r}
+ggplot(aes(x = residual.sugar), data = wines) +
+  geom_bar(binwidth = 0.1) +
+  scale_x_continuous(limits = c(1, 3))
+```
+This part of the graph is normal, but I would like to investigate the outliers more later.
+
+
+
+###chlorides
+
+```{r}
+ggplot(aes(x = chlorides), data = wines) +
+  geom_bar()
+```
+
+This graph looks quite a lot like the sugar graph, normal at a certain interval but with a lot of outliers.
+
+```{r}
+ggplot(aes(x = chlorides), data = wines) +
+  geom_bar(binwidth = 0.001) +
+  scale_x_continuous(limits = c(0.025, 0.125))
+```
+
+When zooming in closer, we confirm that this interval is normal. Like with sugar, let's look into the outliers more later.
+
+
+
+###free.sulfur.dioxide
+
+```{r}
+ggplot(aes(x = free.sulfur.dioxide), data = wines) +
+  geom_bar(binwidth = 1)
+```
+
+The graph for free sulfur dioxide is skewed right. Let's see if we can glean any information from the log of this graph. 
+
+```{r}
+ggplot(aes(x = free.sulfur.dioxide), data = wines) +
+  geom_bar(binwidth = 1) +
+  scale_y_log10()
+```
+Nothins sticks out about this graph.
+
+###total.sulfur.dioxide
+
+```{r}
+ggplot(aes(x = total.sulfur.dioxide), data = wines) +
+  geom_bar(binwidth = 1)
+```
+
+The graph of total sulfur dioxide is very similar to that of free sulphur dioxide. This is not much of a surprise. To be sure, let's check the log of this graph as well. 
+
+```{r}
+ggplot(aes(x = total.sulfur.dioxide), data = wines) +
+  geom_bar(binwidth = 2) +
+  scale_y_log10() +
+  scale_x_continuous(limits = c(0, 150))
+```
+
+Like the free sulfur graph, there is not much of note with this graph other than a couple of blank levels. 
+
+###density
+
+```{r}
+ggplot(aes(x = density), data = wines) +
+  geom_bar()
+```
+
+It appears that a lot of the wines gave less accurate entries for density. Let's adjust the binwidth to get a better look.
+
+```{r}
+ggplot(aes(x = density), data = wines) +
+  geom_bar(binwidth = 0.00025)
+```
+
+Other than a few outliers, this graph is normal.
+
+###pH
+
+```{r}
+ggplot(aes(x = pH), data = wines) +
+  geom_bar()
+```
+
+Pretty much normal.
+
+###sulphates
+
+```{r}
+ggplot(aes(x = sulphates), data = wines) +
+  geom_bar()
+```
+
+The majority of wines contain 0.5 to 0.7 levels of sulphates, and very few have more than 1. Yet some of the wines contain over 1.5 sulphates. Do these outliers receive interesting quality scores?
+
+```{r}
+#move to bivariate section
+quantile(wines$sulphates, .95)
+
+summary(subset(wines, sulphates > .93))
+
+```
+
+Not much interesting here as most of these wines are in second quality bucket and have a quality mean similar to the population mean.
+
+```{r}
+ggplot(aes(x = sulphates), data = wines) +
+  geom_bar(binwidth = 0.01) +
+  scale_x_continuous(limits = c(0.4, 1))
+```
+Slightly long-tailed right, mostly normal.
+
+###Bivariate section
+
+With so many variables, lets look at a scatterplot matrix to see how variables relate to each other.
+
+```{r}
+ggpairs(wines, 2:13)
+```
+
+I want to focus on which factors most affect quality. The variables that correlate most with quality are alcohol, sulphates, and volatile acidity. Quality has a moderate correlation with alcohol and a weak correlation with sulphates and volatile acidity. Let's see if the graphs reflect this.
+
+
+```{r}
+ggplot(aes(x = alcohol, y = quality), data = wines) + 
+  geom_point()
+```
+
+There is far too much overplotting in this graph to make any conclusions.
+
+```{r}
+#do this with averages?
+ggplot(aes(x = alcohol, y = quality), data = wines) + 
+  geom_jitter(alpha = 1/4)
+```
+
+Adding some noise, we begin to see that quality increases as alcohol does, but let's see if there is anything we can do to make the realtionship more clear.
+
+```{r}
+#average quality for each alcohol point
+ggplot(aes(x = alcohol, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+That is much better. By taking the quality mean at each point of alcohol, the relationship appears much more clearly. We do have some points that are way off the trend line. Since they all of these points are on an integer value for quality, I suspect that at these alcohol levels, there are few data points to get a good average. Let's limit our points to those with at least 5 observations.
+
+###alcohol 5 or more data points
+
+```{r}
+alcohol.averages <- wines %>% 
+  group_by(alcohol) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+alcohol.averages
+colnames(alcohol.averages) <- c('alcohol', 'quality.mean', 'n')
+alcohol.averages
+
+ggplot(aes(x = alcohol, y = quality.mean), 
+       data = subset(alcohol.averages, n >= 5)) +
+  geom_point() +
+  stat_smooth(method = 'lm') + 
+  scale_x_continuous(limits = c(9, 12.99))
+
+```
+
+From this graph, we can see a clear correlation.  
+
+It appears that bad and average wines have lower alcohol averages than high quality wines. 
+
+Alcohol has a high correlation with density.
+
+```{r}
+#how to improve this.
+
+ggplot(aes(x = density, y = alcohol), data = wines) +
+  geom_point(alpha = .5)
+```
+We see that as alchol increases, density decreases. How does this affect quality?
+
+```{r}
+#move to multivariate
+
+ggplot(aes(x = density, y = alcohol), data = wines) + 
+  geom_point(aes(color = single.quality.bucket)) +
+  scale_color_brewer(type = 'qual')
+  scale_x_continuous(limits = c(0.99, quantile(wines$density, .99)))
+```
+
+As shown above, bad wines have lower alcohol content, and good wines have high alcohol content. When graphed against density, we see that 
+
+
+Let's now investigate our variable that has the second highest correlation with quality, volatile acids. 
+
+```{r}
+#same graph, but for volatile acids
+
+ggplot(aes(x = volatile.acidity, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+```
+
+Skipping immediately to the graph against quality mean instead of quality itself, we see an immediate pattern, but like with alcohol, the we get a lot of quality averages with integer averages. Let's again remove points that don't have at least 5 data points.
+
+```{r}
+
+#maybe delete
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(volatile.acidity))
+```
+
+```{r}
+#volatile acids more than 5
+volatile.acidity.averages <- wines %>% 
+  group_by(volatile.acidity) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+
+volatile.acidity.averages
+colnames(volatile.acidity.averages) <- c('volatile.acidity', 
+                                         'quality.mean', 'n')
+volatile.acidity.averages
+
+ggplot(aes(x = volatile.acidity, y = quality.mean), 
+       data = subset(volatile.acidity.averages, n > 4)) +
+  geom_point() +
+  stat_smooth(method = 'lm')
+
+```
+
+We can now see the negative correlation between quality and volatile acidity. According to winefolly.com, acidity is what gives wine its tart and sour taste. It makes sense too much of this flavor would lower a wine's score.
+
+
+Let's take a quick look into the wines that had volaitle acidity levels higher than 1.
+
+```{r}
+high.volatile.acidity <- subset(wines, volatile.acidity >= 1)
+
+high.volatile.acidity$quality
+
+ggplot(aes(x = volatile.acidity, y = quality), 
+       data = subset(wines, volatile.acidity >= 1)) +
+  geom_point()
+```
+Surprisingly, several of the high volatile acidity wines still received average scores. Unsurprisingly, 3 out of the 10 wines that received the lowest score of 3 had high levels. I wonder what other characteristics these underachieving wines share.
+
+
+Let's now investigate the variable with the next highest coorelation to quality, sulphates.
+
+```{r}
+#same graph, but for sulphates
+
+ggplot(aes(x = sulphates, y = quality), data = wines) + 
+  geom_point(stat = 'summary', fun.y = 'mean')
+
+##count sulphates to see if there are enough at the higher levels
+```
+
+Again, we have many points with integer averages, let's remove those to get a better picture of what is happening. Also, we see outliers 
+
+```{r}
+wines %>% 
+  group_by(quality.bucket) %>% 
+  summarise(mean(sulphates))
+```
+
+```{r}
+#this is how to do it!!!!
+
+#average sulphite by quality 
+sulphates.averages <- wines %>% 
+  group_by(sulphates) %>% 
+  summarise(mean = mean(quality),
+            n = n())
+
+sulphates.averages
+colnames(sulphates.averages) <- c('sulphates', 'quality.mean', 'n')
+sulphates.averages
+
+ggplot(aes(x = sulphates, y = quality.mean), 
+       data = subset(sulphates.averages, n > 4)) +
+  geom_point() +
+  stat_smooth(method = 'lm') +
+  scale_x_continuous(limits = c(0.4, 0.9))
+
+#do the same for total.acidity
+```
+
+Again, we get a clear picture here of the relationship between sulphates and quality.
+
+Earlier in the univariate section, we saw some wines with very high sulphate levels above 1.5. The graph above shows that quality increases as sulphates do, but none of the high sulphate wines had enough data points to be represented in the graph above. Let's see what the graph of those outliers looks like.
+
+
+
+```{r}
+high.sulphates <- subset(wines, sulphates >= 1.5)
+
+high.sulphates$quality
+
+ggplot(aes(x = sulphates, y = quality), 
+       data = subset(wines, sulphates >= 1.5)) +
+  geom_point()
+
+```
+
+It appears that the sulphate outliers buck the trend of increased quality as none of the high sulphate wines scored above 6 and the wine with the highest sulphate level scored an awful 4.
+
+
+
+According to winesandvines.com, balance between sweetness, alcohol, acid, and tannin is important to wine quality. Let residual sugar represent sweetness, and create a new variable total acidity to represent acid. We don't have a good variable to represent tannin, but let's see how the other three variables relate to each other. 
+
+First, let's create the total acidity variable by combining fixed and volatile acidity. Citric acid is included in fixed acids, so won't be added to total acidity.
+
+```{r}
+wines$total.acidity <- wines$fixed.acidity + wines$volatile.acidity
+```
+
+Let's now see how the three alcohol, total acidity, and residual acidity look against each other. 
+
+```{r}
+ggplot(aes(x = alcohol, y = total.acidity), data = wines) + 
+  geom_jitter(alpha = 1/4)
+```
+
+```{r}
+ggplot(aes(x = residual.sugar, y = total.acidity), data = wines) + 
+  geom_point(alpha = 1/5)
+```
+
+```{r}
+ggplot(aes(x = alcohol, y = residual.sugar), data = wines) + 
+  geom_jitter(alpha = 1/5)
+```
+
+There doesn't seem to be much much of a pattern betwen the three variables when graphed against each other. However, I would like to explore how the three variables compare also graphed with quality to see if there are any combinations of the three variables lead to better quality scores.
+
+
+```{r}
+#move this to the bivariate section
+
+quantile(wines$residual.sugar, .95)
+
+mean((subset(wines, residual.sugar > 5.1))$quality)
+```
+
+Like with fixed acidity, wines with a high residual sugar content have a relatively high number of high quality wines.
+
+
+```{r}
+ggplot(aes(x = residual.sugar, y = quality), 
+       data = subset(wines, residual.sugar > 5.1)) + 
+  geom_point()
+```
+
+```{r}
+#add to bivariate section
+
+quantile(wines$chlorides, .95)
+
+mean((subset(wines, chlorides > .1261))$quality)
+```
+
+Unlike with sugar, high amounts of chlorides are underrepresented in the quality wine bucket.
+
+
