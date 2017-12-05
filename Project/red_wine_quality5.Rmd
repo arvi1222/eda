@@ -290,7 +290,7 @@ With so many variables, lets look at a scatterplot matrix to see how variables r
 ggpairs(wines, 2:13)
 ```
 
-I want to focus on which factors most affect quality. The variables that correlate most with quality are alcohol, sulphates, and volatile acidity. Quality has a moderate correlation with alcohol and a weak correlation with sulphates, volatile acidity, and citric acid. Let's see if the graphs reflect this.
+I want to focus on which factors most affect quality. The variables that correlate most with quality are alcohol, sulphates, volatile acidity, and citric acid. Quality has a moderate correlation with alcohol and a weak correlation with sulphates, volatile acidity, and citric acid. Let's see if the graphs reflect this.
 
 
 
@@ -542,13 +542,37 @@ ggplot(aes(x = residual.sugar, y = alcohol), data = wines) +
 
 In this graph we can see a clear pattern with quality. Unfortunately, quality only seems to be affected by alcohol. As alcohol level increases so does quality, but as we increase along the x-axis quality stays the same as residual sugar increases. It's a shame we aren't provided with total sugar data. I believe that if we had a variable that better represented the sweet flavor profile of wines, we would have gotten more interesting results from the previous two visualizations.
 
+###Building Linear Model for Quality
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(memisc)
+
+m1 <- lm(I(quality) ~ I(alcohol), data = wines)
+m2 <- update(m1, ~ . + sulphates)
+m3 <- update(m2, ~ . + volatile.acidity)
+m4 <- update(m3, ~ . + citric.acid)
+mtable(m1, m2, m3, m4)
+
+```
+
+
 ##Multivariate Analysis
 
 ###Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
 
+There was an interesting interaction between alcohol and total acidity. The feature of interest, quality, would increase as alcohol and acidity increased, but only one of the variables would increase in comparison to the other. It appears as though strong flavors are prefered, but only one strong flavor and not both. 
+
 ###Were there any interesting or surprising interactions between features?
 
+I found it surprising that residual sugar had little to do with quality scores when compared in conjuncture with another flavor variable. Since sweetness is a major component of flavor, which is a major component of wine quality, and since adding sweetness to help balance out bitter, burning from alcohol, and acidic flavors, I was expecting it to have a huge effect on quality. 
+
+I believe the reason for this is that residual sugar only represents the sugars left over after fermentations and not necessarily added sugars so the variable we use to approximate the sweetness of a wine is not accurate.
+
 ###OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+Yes, I created a model using the four variables from the bivariate section. 
+
+The model is limited as the four variables accounted for only 34% of variance in quality of the wines. Citric acid did not increase improve the R^2 value at all and should be left out of the model.
 
 ##Final Plots and Summary
 
@@ -567,25 +591,47 @@ ggplot(aes(x = alcohol, y = quality.mean),
        data = subset(alcohol.averages, n >= 5)) +
   geom_point() +
   stat_smooth(method = 'lm') + 
-  scale_x_continuous(limits = c(9, 12.99))
+  scale_x_continuous(limits = c(9, 12.99)) +
+  ggtitle("Average Quality Score by Alcohol Percentage") +
+  xlab("Alcohol Percentage") +
+  ylab("Average Quality") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 ```
 ###Description One
+At first glance, it was hard to see the relationship between quality and alcohol. This visualization shows a linear relationship showing quality increasing as alcohol increases.
 
 ###Plot Two
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(aes(x=citric.acid), data =wines) + 
   geom_density(fill = 'yellow') +
-  facet_wrap(~quality)
+  facet_wrap(~quality) +
+  ggtitle("Citric Acid Density at Each Quality Level") + 
+  xlab("g / dm^3") +
+  ylab("") +
+  theme(plot.title = element_text(hjust = 0.5))
+
 ```
 ###Description Two
+Graphing citric acid against average quality ratings did not provide a linear graph. Creating a density of citric acid at each quality level allows one to see that higher citric acid levels correlated to higher quality scores.
 
 ###Plot Three
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(aes(x = alcohol, y = total.acidity), data = wines) + 
   geom_point(aes(color = single.quality.bucket)) + 
-  scale_color_brewer(type = 'qual')
+  scale_color_brewer(type = 'qual') +
+  ggtitle("Quality of Wines by Alcohol and Total Acidity") +
+  xlab("Alcohol Percentage") +
+  ylab("Total Acidity (g / dm^3)") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(color = 'Quality')
 ```
 ###Description Three
+This graph demonstrated that some variables, when together, affected quality differently than when they were on their own. Here, as quality was at its highest when one variable was high, but the other was relatively low.
 
 ##Reflection
+The wine dataset contained 1599 different red wines. Each wine contained 11 input attributes and one output attribute. My overall objective was to find how the input attributes affected quality scores. I began by looking at each of the variables to understand them. I then began comparing some of the of the variables to quality and saw how they corellated. Some clear trends emerged, especially between alcohol and quality. Comparing some of the input variables against each other gave some surprising results. Residual sugar had little relationship with any of the other variables even when combined against quality. While I didn't find very strong corellations between quality and the input variables, I still made an attempt to create a model. Unfortunately, the model was only able to account for 34% of variance.
+
+Several limitations to the model exist. To begin with, it's low R^2 value. Also, quality values were subjective, which means bias. Finally, quality values had a very narrow distribution. None of the wines received scores of 1, 2, 9, or 10; and 82% of the wines had an average score of 5 or 6. This lack of differentitaion made finding corellations difficult.
+
+For further investigations, I would look more indepth on if the wines that received high quality scores (7 or 8) had any glaring differences from those that scored in the middle (5 or 6) or low (3 or 4) tier. A larger dataset would be useful, especially one that included some exceptional (9 or 10) and terrible (1 or 2) wines. More variables would be better as well, I would be most interested in knowing the total sugar and tannin levels to get the full scope of wine flavor.
